@@ -14,33 +14,33 @@ void set_size(struct Cuboid* cuboid, double length, double width, double height)
 {
     if (length > 0.0 && width > 0.0 && height > 0.0) 
     {
-        cuboid->length = length;
-        cuboid->width = width;
-        cuboid->height = height;
+        cuboid -> length = length;
+        cuboid -> width = width;
+        cuboid -> height = height;
     } else 
     {
-        cuboid->length = cuboid->width = cuboid->height = NAN;
+        cuboid -> length = cuboid -> width = cuboid -> height = NAN;
     }
 }
 
 //Térfogat
 double calc_volume(const struct Cuboid* cuboid) 
 {
-    return cuboid->length * cuboid->width * cuboid->height;
+    return cuboid -> length * cuboid -> width * cuboid -> height;
 }
 
 //Felszín
 double calc_surface(const struct Cuboid* cuboid) 
 {
-    return 2 * (cuboid->length * cuboid->width + cuboid->width * cuboid->height + cuboid->length * cuboid->height);
+    return 2 * (cuboid -> length * cuboid -> width + cuboid -> width * cuboid -> height + cuboid -> length * cuboid -> height);
 }
 
 //Négyzetlap vizsgálat
 int has_square_face(const struct Cuboid* cuboid) 
 {
-    return (cuboid->length == cuboid->width || 
-            cuboid->width == cuboid->height || 
-            cuboid->length == cuboid->height);
+    return (cuboid -> length == cuboid -> width || 
+            cuboid -> width == cuboid -> height || 
+            cuboid -> length == cuboid -> height);
 }
 
 int main() {
