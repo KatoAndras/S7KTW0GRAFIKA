@@ -2,7 +2,6 @@
 #define CAMERA_H
 
 #include <glad/glad.h>
-#include <GL/freeglut.h>
 
 typedef struct 
 {

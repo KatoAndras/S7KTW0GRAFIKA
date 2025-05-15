@@ -1,7 +1,9 @@
 
+#define SDL_MAIN_HANDLED
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
+#include <stdbool.h>
 
 #ifdef _WIN32
   #include <windows.h>
@@ -18,7 +20,8 @@
 #endif
 
 #include <glad/glad.h>
-#include <GL/freeglut.h>
+#include <SDL.h>
+#include <SDL_opengl.h>
 #include <GL/glu.h>
 
 #include "camera.h"
@@ -33,8 +36,9 @@ GLuint texEarth, texMoon, texSun;
 GLuint shaderProgram;
 float lightIntensity = 1.0f;
 
-//Ablakmeret valtas 
-void reshape(int w, int h) {
+//Ablakmeret valtas
+void reshape(int w, int h) 
+{
     if (h == 0) h = 1;
     float aspect = (float)w / (float)h;
     glViewport(0, 0, w, h);
@@ -48,8 +52,9 @@ void reshape(int w, int h) {
 }
 
 //Animacio ideje (mp)
-float getTime(void) {
-    return glutGet(GLUT_ELAPSED_TIME) / 1000.0f;
+float getTime(void) 
+{
+    return SDL_GetTicks() / 1000.0f;
 }
 
 
@@ -59,20 +64,19 @@ void renderScene(void)
     glLoadIdentity();
     camera_apply(&cam);
 
-    //fenyero valtoztatasa texturan
     glDisable(GL_LIGHTING);
     glEnable(GL_TEXTURE_2D);
     glColor3f(lightIntensity, lightIntensity, lightIntensity);
 
     float t = getTime();
 
-
+    
     glPushMatrix();
       glRotatef(t * 5.0f, 0,1,0);
       drawModel(&sun, texSun);
     glPopMatrix();
 
-
+    
     glPushMatrix();
       glRotatef(t * 20.0f, 0,1,0);
       glTranslatef(8,0,0);
@@ -90,38 +94,42 @@ void renderScene(void)
       glRotatef(t * 100.0f, 0,1,0);
       drawModel(&moon, texMoon);
     glPopMatrix();
-
-    glutSwapBuffers();
-
 }
 
 
-void keyboard(unsigned char key, int x, int y) 
+void handleKeyboard(SDL_Keysym keysym) 
 {
-    if (key=='+' || key=='=') 
+    unsigned char key = (unsigned char)keysym.sym;
+    if (keysym.sym == SDLK_PLUS || keysym.sym == SDLK_EQUALS) 
     {
         lightIntensity = fminf(lightIntensity + 0.1f, 2.0f);
     }
-    if (key=='-') 
+    else if (keysym.sym == SDLK_MINUS) 
     {
         lightIntensity = fmaxf(lightIntensity - 0.1f, 0.0f);
     }
-    if (key==27) exit(0);
-
-    camera_process_keyboard(&cam, key);
+    else if (keysym.sym == SDLK_ESCAPE) 
+    {
+        SDL_Event ev; ev.type = SDL_QUIT;
+        SDL_PushEvent(&ev);
+    }
+    else 
+    {
+        camera_process_keyboard(&cam, key);
+    }
 }
 
-void special(int key, int x, int y) 
+void handleSpecial(SDL_Keysym keysym) 
 {
-    switch(key) 
-    {
-        case GLUT_KEY_LEFT:  camera_process_keyboard(&cam,'a'); break;
-        case GLUT_KEY_RIGHT: camera_process_keyboard(&cam,'d'); break;
-        case GLUT_KEY_UP:    camera_process_keyboard(&cam,'w'); break;
-        case GLUT_KEY_DOWN:  camera_process_keyboard(&cam,'s'); break;
-        case GLUT_KEY_F1:
-            MessageBoxA(
-                NULL,
+    switch (keysym.sym) {
+        case SDLK_LEFT:   camera_process_keyboard(&cam, 'a'); break;
+        case SDLK_RIGHT:  camera_process_keyboard(&cam, 'd'); break;
+        case SDLK_UP:     camera_process_keyboard(&cam, 'w'); break;
+        case SDLK_DOWN:   camera_process_keyboard(&cam, 's'); break;
+        case SDLK_F1:
+            SDL_ShowSimpleMessageBox(
+              SDL_MESSAGEBOX_INFORMATION,
+              "Space Sugo",
                 "  W:   elore\n"
                 "  A:   balra\n"
                 "  S:   hatra\n"
@@ -133,14 +141,15 @@ void special(int key, int x, int y)
                 "  + / - :  fenyero novelese/csokkentese\n"
                 "  F1:  sugo megjelenitese\n"
                 "  Esc: kilepes",
-                "Space Sugo",
-                MB_OK | MB_ICONINFORMATION
+              NULL
             );
             break;
+        default: break;
     }
 }
 
-void mouseMotion(int x, int y) 
+
+void handleMouseMotion(int x, int y) 
 {
     camera_process_mouse(&cam, x, y);
 }
@@ -148,31 +157,31 @@ void mouseMotion(int x, int y)
 
 void initScene(void) 
 {
-    glClearColor(0.0f, 0.0f, 0.05f, 1.0f);
+    glClearColor(0.0f,0.0f,0.05f,1.0f);
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_TEXTURE_2D);
 
     glEnable(GL_LIGHTING);
     glEnable(GL_LIGHT0);
     {
-        GLfloat amb[] = { 0.1f, 0.1f, 0.1f, 1.0f };
-        GLfloat diff[] = { lightIntensity, lightIntensity, lightIntensity, 1.0f };
-        GLfloat pos[] = { 0.0f, 5.0f, 5.0f, 1.0f };
+        GLfloat amb[]  = {0.1f,0.1f,0.1f,1.0f};
+        GLfloat diff[] = {lightIntensity,lightIntensity,lightIntensity,1.0f};
+        GLfloat pos[]  = {0.0f,5.0f,5.0f,1.0f};
         glLightfv(GL_LIGHT0, GL_AMBIENT,  amb);
         glLightfv(GL_LIGHT0, GL_DIFFUSE,  diff);
         glLightfv(GL_LIGHT0, GL_POSITION, pos);
     }
 
-    shaderProgram = loadShaderProgram("shaders/vertex.glsl", "shaders/fragment.glsl");
+    shaderProgram = loadShaderProgram("shaders/vertex.glsl","shaders/fragment.glsl");
     if (!shaderProgram) 
     {
-        fprintf(stderr, "Shader letrehozasi hiba!\n");
+        fprintf(stderr,"Shader létrehozási hiba!\n");
         exit(1);
     }
 
-    loadOBJ("models/earth.obj", &earth);
-    loadOBJ("models/moon.obj", &moon);
-    loadOBJ("models/sun.obj", &sun);
+    loadOBJ("models/earth.obj",&earth);
+    loadOBJ("models/moon.obj",&moon);
+    loadOBJ("models/sun.obj",&sun);
 
     texEarth = loadTexture("textures/earth.jpg");
     texMoon  = loadTexture("textures/moon.jpg");
@@ -181,38 +190,89 @@ void initScene(void)
 
 int main(int argc, char **argv) 
 {
-    glutInit(&argc, argv);
-    glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGBA | GLUT_DEPTH);
-    glutInitWindowSize(800, 600);
-    glutCreateWindow("Space");
+    SDL_SetMainReady();
+    if (SDL_Init(SDL_INIT_VIDEO|SDL_INIT_TIMER) != 0) 
+    {
+        fprintf(stderr,"SDL init hiba: %s\n",SDL_GetError());
+        return -1;
+    }
 
-    glutReshapeFunc(reshape);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION,3);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION,3);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_COMPATIBILITY);
+    SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER,1);
+    SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE,24);
+
+    SDL_Window *win = SDL_CreateWindow(
+        "Space SDL2",
+        SDL_WINDOWPOS_CENTERED,SDL_WINDOWPOS_CENTERED,
+        800,600,
+        SDL_WINDOW_OPENGL|SDL_WINDOW_RESIZABLE
+    );
+    
+    if (!win) 
+    {
+        fprintf(stderr,"Ablak hiba: %s\n",SDL_GetError());
+        return -1;
+    }
+    SDL_GLContext glc = SDL_GL_CreateContext(win);
+    if (!glc) 
+    {
+        fprintf(stderr,"GL kontextus hiba: %s\n",SDL_GetError());
+        return -1;
+    }
 
     #ifdef _WIN32
       if (!gladLoadGLLoader(getGLProc)) 
       {
-        #else
-        if (!gladLoadGLLoader((GLADloadproc)glutGetProcAddress)) 
-        {
-        #endif
-        fprintf(stderr, "GLAD init FAILED\n");
+    #else
+      if (!gladLoadGLLoader((GLADloadproc)SDL_GL_GetProcAddress)) 
+      {
+    #endif
+        fprintf(stderr,"GLAD init FAILED\n");
         return -1;
     }
 
-    reshape(800, 600);
 
+    int w,h;
+    SDL_GetWindowSize(win,&w,&h);
+    reshape(w,h);
     camera_init(&cam);
     initScene();
 
-    glutDisplayFunc(renderScene);
-    glutIdleFunc(renderScene);
-    glutKeyboardFunc(keyboard);
-    glutSpecialFunc(special);
-    glutPassiveMotionFunc(mouseMotion);
 
-    glutMainLoop();
+    bool running = true;
+    SDL_Event ev;
+    while (running) 
+    {
+        while (SDL_PollEvent(&ev)) 
+        {
+            switch (ev.type) 
+            {
+                case SDL_QUIT:
+                    running = false;
+                    break;
+                case SDL_WINDOWEVENT:
+                    if (ev.window.event == SDL_WINDOWEVENT_RESIZED)
+                        reshape(ev.window.data1,ev.window.data2);
+                    break;
+                case SDL_KEYDOWN:
+                    handleKeyboard(ev.key.keysym);
+                    handleSpecial(ev.key.keysym);
+                    break;
+                case SDL_MOUSEMOTION:
+                    handleMouseMotion(ev.motion.x, ev.motion.y);
+                    break;
+            }
+        }
+        renderScene();
+        SDL_GL_SwapWindow(win);
+    }
+
+    SDL_GL_DeleteContext(glc);
+    SDL_DestroyWindow(win);
+
+    SDL_Quit();
 
     return 0;
-    
 }
-
